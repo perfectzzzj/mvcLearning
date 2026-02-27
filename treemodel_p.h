@@ -16,6 +16,13 @@ public:
         m_children.append(child);
     }
 
+    void removeChild(int row) {
+        if (row < 0 || row >= m_children.size())
+            return;
+
+        delete m_children.takeAt(row);
+    }
+
     TreeNode* child(int row) const {
         return m_children.value(row);
     }
@@ -29,6 +36,10 @@ public:
             return m_parent->m_children.indexOf(const_cast<TreeNode*>(this));
         }
         return 0;
+    }
+
+    void setName(const QString& name) {
+        m_name = name;
     }
     
     QString name() const {

@@ -67,3 +67,74 @@ QVariant TreeModel::data(const QModelIndex& index, int role) const
     TreeNode* node = static_cast<TreeNode*>(index.internalPointer());
     return node->name();
 }
+
+//权限表，做很多操作前，主动查询
+Qt::ItemFlags TreeModel::flags(const QModelIndex& index) const
+{
+    if (!index.isValid())
+        return Qt::NoItemFlags;
+
+    return Qt::ItemIsSelectable
+         | Qt::ItemIsEnabled
+         | Qt::ItemIsEditable;   // 节点可编辑
+}
+
+bool TreeModel::setData(const QModelIndex& index,
+                        const QVariant& value,
+                        int role)
+{
+    if (!index.isValid())
+        return false;
+
+    if (role != Qt::EditRole)
+        return false;
+
+    TreeNode* node = static_cast<TreeNode*>(index.internalPointer());
+
+    node->setName(value.toString());
+
+    // 通知 View 数据改变(结构已有的数据)
+    emit dataChanged(index, index);
+
+    return true;
+}
+
+/*----------------------------------------------*/
+
+void TreeModel::addChild(const QModelIndex& parentIndex, const QString& name)
+{
+    TreeNode* parentNode = !parentIndex.isValid() ? m_rootNode : static_cast<TreeNode*>(parentIndex.internalPointer());
+
+    int row = parentNode->childCount();
+
+    beginInsertRows(parentIndex, row, row);
+    TreeNode* newNode = new TreeNode(name, parentNode);
+    parentNode->appendChild(newNode);
+    endInsertRows();
+
+
+    /*TreeNode* newNode = new TreeNode(name, parentNode);
+    parentNode->appendChild(newNode);
+
+    // 通知视图数据已更改，但结构未改变。下一次刷新时，添加的节点才显示。
+    // 因为dataChanged只能通知“已有结构”的内容改变，而不能通知“结构本身”改变，所以需要调用beginInsertRows和endInsertRows来通知视图结构发生了变化。
+    int row = parentNode->childCount() - 1;
+    QModelIndex newIndex = createIndex(row, 0, newNode);
+    emit dataChanged(newIndex, newIndex);*/
+}
+
+void TreeModel::removeNode(const QModelIndex& index)
+{
+    if (!index.isValid())
+        return;
+
+    TreeNode* node = static_cast<TreeNode*>(index.internalPointer());
+    TreeNode* parentNode = node->parent();
+    if (parentNode->childCount() == 0)
+        return;
+
+    int row = node->row();
+    beginRemoveRows(index.parent(), row, row);
+    parentNode->removeChild(row);
+    endRemoveRows();
+}
