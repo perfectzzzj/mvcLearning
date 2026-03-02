@@ -1,22 +1,18 @@
+#include <Qdir>
+
 #include "treemodel.h"
 
-TreeModel::TreeModel(QObject* parent)
-    : QAbstractItemModel(parent), m_rootNode(new TreeNode("Root"))
+TreeModel::TreeModel(const QString& rootPath, QObject* parent)
+    : QAbstractItemModel(parent), m_rootNode(new TreeNode(QFileInfo(rootPath)))
 {
-    // 构建树结构
-    TreeNode* child1 = new TreeNode("Child 1", m_rootNode);
-    TreeNode* child2 = new TreeNode("Child 2", m_rootNode);
-    m_rootNode->appendChild(child1);
-    m_rootNode->appendChild(child2);
-
-    child1->appendChild(new TreeNode("Grandchild 1.1", child1));
-    child1->appendChild(new TreeNode("Grandchild 1.2", child1));
-    child2->appendChild(new TreeNode("Grandchild 2.1", child2));
+    m_invisibleRootNode = new TreeNode(QFileInfo(), nullptr);
+    m_invisibleRootNode->appendChild(m_rootNode);
+    buildTree(m_rootNode);
 }
 
 TreeModel::~TreeModel()
 {
-    delete m_rootNode;
+    delete m_invisibleRootNode;
 }
 
 QModelIndex TreeModel::index(int row, int column, const QModelIndex& parent) const
@@ -24,7 +20,7 @@ QModelIndex TreeModel::index(int row, int column, const QModelIndex& parent) con
     if (!hasIndex(row, column, parent))
         return QModelIndex();
 
-    TreeNode* parentNode = !parent.isValid() ? m_rootNode : static_cast<TreeNode*>(parent.internalPointer());
+    TreeNode* parentNode = !parent.isValid() ? m_invisibleRootNode : static_cast<TreeNode*>(parent.internalPointer());
     TreeNode* childNode = parentNode->child(row);
     if (childNode)
         return createIndex(row, column, childNode);
@@ -39,7 +35,7 @@ QModelIndex TreeModel::parent(const QModelIndex& index) const
     TreeNode* childNode = static_cast<TreeNode*>(index.internalPointer());
     TreeNode* parentNode = childNode->parent();
 
-    if (parentNode == m_rootNode)
+    if (parentNode == m_invisibleRootNode)
         return QModelIndex();
 
     return createIndex(parentNode->row(), 0, parentNode);
@@ -47,7 +43,7 @@ QModelIndex TreeModel::parent(const QModelIndex& index) const
 
 int TreeModel::rowCount(const QModelIndex& parent) const
 {
-    TreeNode* parentNode = !parent.isValid() ? m_rootNode : static_cast<TreeNode*>(parent.internalPointer());
+    TreeNode* parentNode = !parent.isValid() ? m_invisibleRootNode : static_cast<TreeNode*>(parent.internalPointer());
     return parentNode->childCount();
 }
 
@@ -75,8 +71,8 @@ Qt::ItemFlags TreeModel::flags(const QModelIndex& index) const
         return Qt::NoItemFlags;
 
     return Qt::ItemIsSelectable
-         | Qt::ItemIsEnabled
-         | Qt::ItemIsEditable;   // 节点可编辑
+         | Qt::ItemIsEnabled;
+        //  | Qt::ItemIsEditable;   // 节点可编辑
 }
 
 bool TreeModel::setData(const QModelIndex& index,
@@ -91,7 +87,7 @@ bool TreeModel::setData(const QModelIndex& index,
 
     TreeNode* node = static_cast<TreeNode*>(index.internalPointer());
 
-    node->setName(value.toString());
+    // node->setName(value.toString());
 
     // 通知 View 数据改变(结构已有的数据)
     emit dataChanged(index, index);
@@ -101,14 +97,14 @@ bool TreeModel::setData(const QModelIndex& index,
 
 /*----------------------------------------------*/
 
-void TreeModel::addChild(const QModelIndex& parentIndex, const QString& name)
+void TreeModel::addChild(const QModelIndex& parentIndex, const QString& path)
 {
     TreeNode* parentNode = !parentIndex.isValid() ? m_rootNode : static_cast<TreeNode*>(parentIndex.internalPointer());
 
     int row = parentNode->childCount();
 
     beginInsertRows(parentIndex, row, row);
-    TreeNode* newNode = new TreeNode(name, parentNode);
+    TreeNode* newNode = new TreeNode(QFileInfo(path), parentNode);
     parentNode->appendChild(newNode);
     endInsertRows();
 
@@ -137,4 +133,18 @@ void TreeModel::removeNode(const QModelIndex& index)
     beginRemoveRows(index.parent(), row, row);
     parentNode->removeChild(row);
     endRemoveRows();
+}
+
+void TreeModel::buildTree(TreeNode* node)
+{
+    QDir dir(node->info().absoluteFilePath());
+    QFileInfoList fileInfoList = dir.entryInfoList(QDir::Dirs | QDir::Files | QDir::NoDotAndDotDot);
+
+    for (const QFileInfo& info : fileInfoList) {
+        TreeNode* childNode = new TreeNode(info, node);
+        node->appendChild(childNode);
+        if (info.isDir()) {
+            buildTree(childNode);
+        }
+    }
 }

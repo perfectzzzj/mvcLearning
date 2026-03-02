@@ -1,19 +1,21 @@
 #pragma once
-#include <QString>
+#include <QFileInfo>
 #include <QVector>
 
 class TreeNode
 {
 public:
-    explicit TreeNode(const QString& name, TreeNode* parent = nullptr)
-        : m_name(name), m_parent(parent) {}
+    explicit TreeNode(const QFileInfo& info, TreeNode* parent = nullptr)
+        : m_info(info), m_parent(parent) {}
 
     ~TreeNode() {
         qDeleteAll(m_children);
     }
 
     void appendChild(TreeNode* child) {
+        child->m_row = m_children.size();
         m_children.append(child);
+        child->m_parent = this;
     }
 
     void removeChild(int row) {
@@ -32,26 +34,28 @@ public:
     }
     
     int row() const {
-        if (m_parent) {
-            return m_parent->m_children.indexOf(const_cast<TreeNode*>(this));
-        }
-        return 0;
-    }
-
-    void setName(const QString& name) {
-        m_name = name;
-    }
-    
-    QString name() const {
-        return m_name;
+        return m_row;
     }
 
     TreeNode* parent() const {
         return m_parent;
     }
 
+    QString name() const {
+        return m_info.fileName();
+    }
+
+    const QFileInfo& info() const {
+        return m_info;
+    }
+
+    bool isDir() const {
+        return m_info.isDir();
+    }
+
 private:
-    QString m_name;
+    QFileInfo m_info;
     TreeNode* m_parent;
     QVector<TreeNode*> m_children;
+    int m_row = 0;
 };

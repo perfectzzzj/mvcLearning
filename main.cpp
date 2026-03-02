@@ -13,29 +13,29 @@ int main(int argc, char *argv[])
     QVBoxLayout* layout = new QVBoxLayout(&window);
 
     QTreeView* treeView = new QTreeView;
-    QPushButton* button = new QPushButton("Add Child");
+    // QPushButton* button = new QPushButton("Add Child");
 
-    TreeModel* model = new TreeModel;
+    TreeModel* model = new TreeModel("F:/practice/qt/mvc");
     treeView->setModel(model);
 
     layout->addWidget(treeView);
-    layout->addWidget(button);
+    // layout->addWidget(button);
 
-    QObject::connect(button, &QPushButton::clicked,
-                     [&]() {
-        QModelIndex current = treeView->currentIndex();
-        model->addChild(current, "New Node");
-    });
+    // QObject::connect(button, &QPushButton::clicked,
+    //                  [&]() {
+    //     QModelIndex current = treeView->currentIndex();
+    //     model->addChild(current, "New Node");
+    // });
 
 
-    QPushButton* deleteBtn = new QPushButton("Delete Node");
-    layout->addWidget(deleteBtn);
+    // QPushButton* deleteBtn = new QPushButton("Delete Node");
+    // layout->addWidget(deleteBtn);
 
-    QObject::connect(deleteBtn, &QPushButton::clicked,
-                    [&]() {
-        QModelIndex current = treeView->currentIndex();
-        model->removeNode(current);
-    });
+    // QObject::connect(deleteBtn, &QPushButton::clicked,
+    //                 [&]() {
+    //     QModelIndex current = treeView->currentIndex();
+    //     model->removeNode(current);
+    // });
 
     window.show();
     return app.exec();
