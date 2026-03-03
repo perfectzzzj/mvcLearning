@@ -7,7 +7,7 @@ TreeModel::TreeModel(const QString& rootPath, QObject* parent)
 {
     m_invisibleRootNode = new TreeNode(QFileInfo(), nullptr);
     m_invisibleRootNode->appendChild(m_rootNode);
-    buildTree(m_rootNode);
+    m_invisibleRootNode->setChildrenLoaded(true); // root node is already loaded, so mark it as loaded to avoid lazy loading logic in rowCount.
 }
 
 TreeModel::~TreeModel()
@@ -44,6 +44,10 @@ QModelIndex TreeModel::parent(const QModelIndex& index) const
 int TreeModel::rowCount(const QModelIndex& parent) const
 {
     TreeNode* parentNode = !parent.isValid() ? m_invisibleRootNode : static_cast<TreeNode*>(parent.internalPointer());
+    //lazy load. if not loaded, return 0 to avoid fetching children immediately. fetchMore will be called when expanding the node.
+    if (!parentNode->childrenLoaded())
+        return 0;
+
     return parentNode->childCount();
 }
 
@@ -93,6 +97,47 @@ bool TreeModel::setData(const QModelIndex& index,
     emit dataChanged(index, index);
 
     return true;
+}
+
+bool TreeModel::canFetchMore(const QModelIndex& index) const
+{
+    if (!index.isValid())
+        return false;
+
+
+    TreeNode* node = static_cast<TreeNode*>(index.internalPointer());
+    return node->isDir() && !node->childrenLoaded();
+}
+
+void  TreeModel::fetchMore(const QModelIndex& index)
+{
+    if (!index.isValid())
+        return;
+
+    TreeNode* node = static_cast<TreeNode*>(index.internalPointer());
+    if (node->isDir() && !node->childrenLoaded()) {
+        QDir dir(node->info().absoluteFilePath());
+        QFileInfoList fileInfoList = dir.entryInfoList(QDir::Dirs | QDir::Files | QDir::NoDotAndDotDot);
+
+        int start = 0;
+        int end = fileInfoList.size() - 1;
+        beginInsertRows(index, start, end);
+        for (const QFileInfo& info : fileInfoList) {
+            TreeNode* childNode = new TreeNode(info, node);
+            node->appendChild(childNode);
+        }
+        node->setChildrenLoaded(true);
+        endInsertRows();
+    }
+}
+
+bool TreeModel::hasChildren(const QModelIndex& index) const
+{
+    if (!index.isValid())
+        return m_invisibleRootNode->childCount() > 0;
+
+    TreeNode* node = static_cast<TreeNode*>(index.internalPointer());
+    return node->isDir();
 }
 
 /*----------------------------------------------*/

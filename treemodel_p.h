@@ -53,9 +53,18 @@ public:
         return m_info.isDir();
     }
 
+    bool childrenLoaded() const {
+    return m_childrenLoaded;
+    }
+
+    void setChildrenLoaded(bool loaded) {
+        m_childrenLoaded = loaded;
+    }
+
 private:
     QFileInfo m_info;
     TreeNode* m_parent;
     QVector<TreeNode*> m_children;
     int m_row = 0;
+    bool m_childrenLoaded = false; // 标记子节点是否已加载
 };
