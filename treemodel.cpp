@@ -5,14 +5,11 @@
 TreeModel::TreeModel(const QString& rootPath, QObject* parent)
     : QAbstractItemModel(parent), m_rootNode(new TreeNode(QFileInfo(rootPath)))
 {
-    m_invisibleRootNode = new TreeNode(QFileInfo(), nullptr);
-    m_invisibleRootNode->appendChild(m_rootNode);
-    m_invisibleRootNode->setChildrenLoaded(true); // root node is already loaded, so mark it as loaded to avoid lazy loading logic in rowCount.
 }
 
 TreeModel::~TreeModel()
 {
-    delete m_invisibleRootNode;
+    delete m_rootNode;
 }
 
 QModelIndex TreeModel::index(int row, int column, const QModelIndex& parent) const
@@ -20,7 +17,14 @@ QModelIndex TreeModel::index(int row, int column, const QModelIndex& parent) con
     if (!hasIndex(row, column, parent))
         return QModelIndex();
 
-    TreeNode* parentNode = !parent.isValid() ? m_invisibleRootNode : static_cast<TreeNode*>(parent.internalPointer());
+    if (!parent.isValid())
+    {
+        if (row==0)
+            return createIndex(0, column, m_rootNode);
+        return QModelIndex();
+    }
+
+    TreeNode* parentNode = static_cast<TreeNode*>(parent.internalPointer());
     TreeNode* childNode = parentNode->child(row);
     if (childNode)
         return createIndex(row, column, childNode);
@@ -35,7 +39,7 @@ QModelIndex TreeModel::parent(const QModelIndex& index) const
     TreeNode* childNode = static_cast<TreeNode*>(index.internalPointer());
     TreeNode* parentNode = childNode->parent();
 
-    if (parentNode == m_invisibleRootNode)
+    if (parentNode == nullptr && childNode == m_rootNode)
         return QModelIndex();
 
     return createIndex(parentNode->row(), 0, parentNode);
@@ -43,7 +47,10 @@ QModelIndex TreeModel::parent(const QModelIndex& index) const
 
 int TreeModel::rowCount(const QModelIndex& parent) const
 {
-    TreeNode* parentNode = !parent.isValid() ? m_invisibleRootNode : static_cast<TreeNode*>(parent.internalPointer());
+    if (!parent.isValid())
+        return 1;// m_rootnode self
+
+    TreeNode* parentNode = static_cast<TreeNode*>(parent.internalPointer());
     //lazy load. if not loaded, return 0 to avoid fetching children immediately. fetchMore will be called when expanding the node.
     if (!parentNode->childrenLoaded())
         return 0;
@@ -134,7 +141,7 @@ void  TreeModel::fetchMore(const QModelIndex& index)
 bool TreeModel::hasChildren(const QModelIndex& index) const
 {
     if (!index.isValid())
-        return m_invisibleRootNode->childCount() > 0;
+        return m_rootNode->isDir();
 
     TreeNode* node = static_cast<TreeNode*>(index.internalPointer());
     return node->isDir();

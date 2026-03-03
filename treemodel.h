@@ -25,6 +25,5 @@ public:
     void buildTree(TreeNode* node);
 
 private:
-    TreeNode* m_invisibleRootNode = nullptr;
     TreeNode* m_rootNode;
 };
