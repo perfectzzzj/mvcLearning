@@ -68,11 +68,18 @@ QVariant TreeModel::data(const QModelIndex& index, int role) const
     if (!index.isValid())
         return QVariant();
 
-    if (role != Qt::DisplayRole)
-        return QVariant();
-
-    TreeNode* node = static_cast<TreeNode*>(index.internalPointer());
-    return node->name();
+    if (role == Qt::DisplayRole)
+    {
+         TreeNode* node = static_cast<TreeNode*>(index.internalPointer());
+         return node->name();
+    }
+    else if (role == Qt::DecorationRole)
+    {
+        TreeNode* node = static_cast<TreeNode*>(index.internalPointer());
+        return node->icon();
+    }
+    
+    return QVariant();
 }
 
 //权限表，做很多操作前，主动查询
@@ -116,7 +123,7 @@ bool TreeModel::canFetchMore(const QModelIndex& index) const
     return node->isDir() && !node->childrenLoaded();
 }
 
-void  TreeModel::fetchMore(const QModelIndex& index)
+void TreeModel::fetchMore(const QModelIndex& index)
 {
     if (!index.isValid())
         return;

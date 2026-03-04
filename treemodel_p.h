@@ -1,6 +1,7 @@
 #pragma once
 #include <QFileInfo>
 #include <QVector>
+#include <QFileIconProvider>
 
 class TreeNode
 {
@@ -61,10 +62,15 @@ public:
         m_childrenLoaded = loaded;
     }
 
+    QIcon icon() const {
+        return m_iconProvider.icon(m_info);
+    }
+
 private:
     QFileInfo m_info;
     TreeNode* m_parent;
     QVector<TreeNode*> m_children;
     int m_row = 0;
     bool m_childrenLoaded = false; // 标记子节点是否已加载
+    QFileIconProvider m_iconProvider;
 };
