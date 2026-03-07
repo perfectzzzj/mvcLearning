@@ -163,13 +163,15 @@ void TreeModel::fetchMore(const QModelIndex& index)
 
         int start = 0;
         int end = fileInfoList.size() - 1;
-        beginInsertRows(index, start, end);
-        for (const QFileInfo& info : fileInfoList) {
-            TreeNode* childNode = new TreeNode(info, node);
-            node->appendChild(childNode);
+        if (start <= end) {
+            beginInsertRows(index, start, end);
+            for (const QFileInfo& info : fileInfoList) {
+                TreeNode* childNode = new TreeNode(info, node);
+                node->appendChild(childNode);
+            }
+            endInsertRows();
         }
         node->setChildrenLoaded(true);
-        endInsertRows();
     }
 }
 
