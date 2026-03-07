@@ -66,6 +66,10 @@ public:
         return m_iconProvider.icon(m_info);
     }
 
+    qint64 size() const {
+        return m_info.size();
+    }
+
 private:
     QFileInfo m_info;
     TreeNode* m_parent;

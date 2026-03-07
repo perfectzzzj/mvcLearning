@@ -19,6 +19,7 @@ public:
     bool canFetchMore(const QModelIndex& index) const override;
     void fetchMore(const QModelIndex& index) override;
     bool hasChildren(const QModelIndex& index = QModelIndex()) const override;
+    QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
 
     void addChild(const QModelIndex& parentIndex, const QString& path);
     void removeNode(const QModelIndex& index);

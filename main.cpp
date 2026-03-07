@@ -15,7 +15,7 @@ int main(int argc, char *argv[])
     QTreeView* treeView = new QTreeView;
     // QPushButton* button = new QPushButton("Add Child");
 
-    TreeModel* model = new TreeModel("F:/practice/qt/mvc");
+    TreeModel* model = new TreeModel("F:/deep_test");
     treeView->setModel(model);
 
     layout->addWidget(treeView);

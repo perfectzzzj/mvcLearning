@@ -2,6 +2,25 @@
 
 #include "treemodel.h"
 
+namespace
+{
+QString formatFileSize(qint64 bytes)
+{
+    const qint64 KB = 1024;
+    const qint64 MB = KB * 1024;
+    const qint64 GB = MB * 1024;
+
+    if (bytes >= GB)
+        return QString::number(bytes / (double)GB, 'f', 2) + " GB";
+    if (bytes >= MB)
+        return QString::number(bytes / (double)MB, 'f', 2) + " MB";
+    if (bytes >= KB)
+        return QString::number(bytes / (double)KB, 'f', 2) + " KB";
+
+    return QString::number(bytes) + " B";
+}
+}
+
 TreeModel::TreeModel(const QString& rootPath, QObject* parent)
     : QAbstractItemModel(parent), m_rootNode(new TreeNode(QFileInfo(rootPath)))
 {
@@ -60,7 +79,7 @@ int TreeModel::rowCount(const QModelIndex& parent) const
 
 int TreeModel::columnCount(const QModelIndex& parent) const
 {
-    return 1; // 只有一列显示节点名称
+    return 2; // name and size
 }
 
 QVariant TreeModel::data(const QModelIndex& index, int role) const
@@ -70,13 +89,22 @@ QVariant TreeModel::data(const QModelIndex& index, int role) const
 
     if (role == Qt::DisplayRole)
     {
-         TreeNode* node = static_cast<TreeNode*>(index.internalPointer());
-         return node->name();
+        if (index.column() == 0) {
+            TreeNode* node = static_cast<TreeNode*>(index.internalPointer());
+            return node->name();
+        }
+        else if (index.column() == 1) {
+            TreeNode* node = static_cast<TreeNode*>(index.internalPointer());
+            if (node->isDir())
+                return QString("<DIR>");
+            return formatFileSize(node->size());
+        }
     }
     else if (role == Qt::DecorationRole)
     {
         TreeNode* node = static_cast<TreeNode*>(index.internalPointer());
-        return node->icon();
+        if (index.column() == 0)
+            return node->icon();
     }
     
     return QVariant();
@@ -152,6 +180,17 @@ bool TreeModel::hasChildren(const QModelIndex& index) const
 
     TreeNode* node = static_cast<TreeNode*>(index.internalPointer());
     return node->isDir();
+}
+
+QVariant TreeModel::headerData(int section, Qt::Orientation orientation, int role) const
+{
+    if (orientation == Qt::Horizontal && role == Qt::DisplayRole) {
+        if (section == 0)
+            return "Name";
+        else if (section == 1)
+            return "Size";
+    }
+    return QVariant();
 }
 
 /*----------------------------------------------*/
