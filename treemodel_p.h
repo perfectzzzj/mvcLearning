@@ -2,6 +2,7 @@
 #include <QFileInfo>
 #include <QVector>
 #include <QFileIconProvider>
+#include <QSortFilterProxyModel>
 
 class TreeNode
 {
@@ -70,6 +71,10 @@ public:
         return m_info.size();
     }
 
+    time_t lastModified() const {
+        return m_info.lastModified().toSecsSinceEpoch();
+    }
+
 private:
     QFileInfo m_info;
     TreeNode* m_parent;
@@ -77,4 +82,42 @@ private:
     int m_row = 0;
     bool m_childrenLoaded = false; // 标记子节点是否已加载
     QFileIconProvider m_iconProvider;
+};
+
+class FileSortProxy : public QSortFilterProxyModel
+{
+protected:
+    //override this function to provide custom sorting logic based on file name, size, or last modified time.
+    bool lessThan(const QModelIndex &left,
+                  const QModelIndex &right) const override
+    {
+        // directory should always be sorted before files, we use userrole to store the QFileInfo of the item, so we can determine if it's a directory or file.
+        QFileInfo leftInfo  = left.data(Qt::UserRole).value<QFileInfo>();
+        QFileInfo rightInfo = right.data(Qt::UserRole).value<QFileInfo>();
+
+        bool leftIsDir  = leftInfo.isDir();
+        bool rightIsDir = rightInfo.isDir();
+
+        if (leftIsDir != rightIsDir)
+            return leftIsDir;
+
+        QVariant l = left.data();
+        QVariant r = right.data();
+        switch (left.column())
+        {
+        case 0: // name
+            return l.toString().toLower() < r.toString().toLower();
+
+        case 1: // size
+            return l.toLongLong() < r.toLongLong();
+
+        case 2: // modified time
+        {
+            return l.toDateTime() < r.toDateTime();
+        }
+
+        default:
+            return QSortFilterProxyModel::lessThan(left, right);
+        }
+    }
 };

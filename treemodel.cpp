@@ -79,7 +79,7 @@ int TreeModel::rowCount(const QModelIndex& parent) const
 
 int TreeModel::columnCount(const QModelIndex& parent) const
 {
-    return 2; // name and size
+    return 3; // name, size, and last modified
 }
 
 QVariant TreeModel::data(const QModelIndex& index, int role) const
@@ -99,12 +99,21 @@ QVariant TreeModel::data(const QModelIndex& index, int role) const
                 return QString("<DIR>");
             return formatFileSize(node->size());
         }
+        else if (index.column() == 2) {
+            TreeNode* node = static_cast<TreeNode*>(index.internalPointer());
+            return QDateTime::fromSecsSinceEpoch(node->lastModified()).toString("yyyy-MM-dd HH:mm:ss");
+        }
     }
     else if (role == Qt::DecorationRole)
     {
         TreeNode* node = static_cast<TreeNode*>(index.internalPointer());
         if (index.column() == 0)
             return node->icon();
+    }
+    else if (role == Qt::UserRole)
+    {
+        TreeNode* node = static_cast<TreeNode*>(index.internalPointer());
+        return QVariant::fromValue(node->info());
     }
     
     return QVariant();
@@ -191,6 +200,8 @@ QVariant TreeModel::headerData(int section, Qt::Orientation orientation, int rol
             return "Name";
         else if (section == 1)
             return "Size";
+        else if (section == 2)
+            return "Last Modified";
     }
     return QVariant();
 }
