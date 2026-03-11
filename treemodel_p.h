@@ -121,3 +121,102 @@ protected:
         }
     }
 };
+
+
+class FileFilterProxy : public QSortFilterProxyModel
+{
+public:
+    void setShowDirsOnly(bool enable)
+    {
+        m_showDirsOnly = enable;
+        invalidateFilter();
+    }
+
+    void setSuffixFilter(const QString &suffix)
+    {
+        m_suffix = suffix;
+        invalidateFilter();
+    }
+
+    void setSearchText(const QString &text)
+    {
+        m_searchText = text;
+        invalidateFilter();
+    }
+protected:
+    bool filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const override
+    {
+        if (!m_showDirsOnly && m_suffix.isEmpty() && m_searchText.isEmpty())
+            return true;
+
+        QModelIndex index = sourceModel()->index(sourceRow, 0, sourceParent);
+
+        if (matches(index))
+            return true;
+
+        if (hasAcceptedParent(sourceParent))
+            return true;
+
+        if (hasAcceptedChildren(index))
+            return true;
+
+        return false;
+    }
+
+private:
+
+    bool matches(const QModelIndex &index) const
+    {
+        if (!m_showDirsOnly && m_suffix.isEmpty() && m_searchText.isEmpty())
+            return true;
+
+        QFileInfo info = index.data(Qt::UserRole).value<QFileInfo>();
+
+        if (m_showDirsOnly && !info.isDir())
+            return false;
+
+        if (!m_suffix.isEmpty() && !info.fileName().endsWith(m_suffix, Qt::CaseInsensitive) && !info.isDir())
+            return false;
+
+        if (!m_searchText.isEmpty() && !info.fileName().contains(m_searchText, Qt::CaseInsensitive))
+            return false;
+
+        return true;
+    }
+
+    bool hasAcceptedParent(QModelIndex parent) const
+    {
+        while (parent.isValid())
+        {
+            if (matches(parent))
+                return true;
+
+            parent = parent.parent();
+        }
+
+        return false;
+    }
+
+    bool hasAcceptedChildren(const QModelIndex &parent) const
+    {
+        int rows = sourceModel()->rowCount(parent);
+
+        for (int i = 0; i < rows; ++i)
+        {
+            QModelIndex child = sourceModel()->index(i, 0, parent);
+
+            if (matches(child))
+                return true;
+
+            if (hasAcceptedChildren(child))
+                return true;
+        }
+
+        return false;
+    }
+
+private:
+    bool m_showDirsOnly = false;
+    QString m_suffix;
+    QString m_searchText;
+};
