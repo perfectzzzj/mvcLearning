@@ -1,5 +1,6 @@
 #pragma once
 #include <QFileInfo>
+#include <QDir>
 #include <QVector>
 #include <QFileIconProvider>
 #include <QSortFilterProxyModel>
@@ -45,6 +46,28 @@ public:
 
     QString name() const {
         return m_info.fileName();
+    }
+
+    void setName(const QString &name) {
+        QString path;
+        if (!m_info.absolutePath().isEmpty())
+            path = m_info.absolutePath() + "/" + name;
+        else
+            path = name;
+        m_info = QFileInfo(path);
+    }
+
+    void updateChildInfos(const QString &oldParentPath, const QString &newParentPath) {
+        for (TreeNode* child : m_children) {
+            QString childPath = child->m_info.absoluteFilePath();
+            if (childPath.startsWith(oldParentPath)) {
+                QString relativePath = childPath.mid(oldParentPath.length());
+                if (relativePath.startsWith('/') || relativePath.startsWith('\\'))
+                    relativePath = relativePath.mid(1);
+                child->m_info = QFileInfo(QDir(newParentPath).filePath(relativePath));
+            }
+            child->updateChildInfos(oldParentPath, newParentPath);
+        }
     }
 
     const QFileInfo& info() const {

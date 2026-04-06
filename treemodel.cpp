@@ -1,4 +1,5 @@
-#include <Qdir>
+#include <QDir>
+#include <QFile>
 
 #include "treemodel.h"
 
@@ -125,9 +126,10 @@ Qt::ItemFlags TreeModel::flags(const QModelIndex& index) const
     if (!index.isValid())
         return Qt::NoItemFlags;
 
-    return Qt::ItemIsSelectable
-         | Qt::ItemIsEnabled;
-        //  | Qt::ItemIsEditable;   // 节点可编辑
+    Qt::ItemFlags flags = Qt::ItemIsSelectable | Qt::ItemIsEnabled;
+    if (index.column() == 0)
+        flags |= Qt::ItemIsEditable;
+    return flags;
 }
 
 bool TreeModel::setData(const QModelIndex& index,
@@ -141,13 +143,32 @@ bool TreeModel::setData(const QModelIndex& index,
         return false;
 
     TreeNode* node = static_cast<TreeNode*>(index.internalPointer());
+    if (index.column() == 0) {
+        const QString newName = value.toString().trimmed();
+        if (newName.isEmpty() || newName == node->name())
+            return false;
 
-    // node->setName(value.toString());
+        if (newName.contains('/') || newName.contains('\\'))
+            return false;
 
-    // 通知 View 数据改变(结构已有的数据)
-    emit dataChanged(index, index);
+        const QString oldPath = node->info().absoluteFilePath();
+        const QString newPath = QDir(node->info().absolutePath()).filePath(newName);
 
-    return true;
+        if (QFile::exists(newPath))
+            return false;
+
+        if (!QFile::rename(oldPath, newPath))
+            return false;
+
+        if (node->isDir() && node->childrenLoaded())
+            node->updateChildInfos(oldPath, newPath);
+
+        node->setName(newName);
+        emit dataChanged(index, index, {Qt::DisplayRole, Qt::UserRole});
+        return true;
+    }
+
+    return false;
 }
 
 bool TreeModel::canFetchMore(const QModelIndex& index) const

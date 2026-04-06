@@ -11,6 +11,8 @@ qt_standard_project_setup()
 
 add_executable(SimpleTree
     main.cpp
+    mainwindow.cpp
+    mainwindow.h
     treemodel.cpp
     treemodel.h
     treemodel_p.h
